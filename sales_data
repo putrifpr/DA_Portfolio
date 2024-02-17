@@ -1,0 +1,80 @@
+SELECT * FROM sales_data;
+DESCRIBE sales_data;
+
+UPDATE sales_data
+SET ORDERDATE = DATE_FORMAT(STR_TO_DATE(ORDERDATE, '%m/%d/%Y %H:%i'), '%Y-%m-%d');
+
+ALTER TABLE sales_data
+MODIFY COLUMN ORDERDATE DATE;
+
+-- Grouping sales by product line
+SELECT
+	PRODUCTLINE,
+    ROUND(SUM(sales), 3) AS REVENUE
+FROM sales_data
+GROUP BY PRODUCTLINE
+ORDER BY 2 DESC;
+
+SELECT
+	YEAR_ID,
+	ROUND(SUM(sales), 3) AS REVENUE
+FROM sales_data
+GROUP BY YEAR_ID
+ORDER BY 2 DESC;
+
+-- 1. What was the best month for sales in a spefsific year? How much was earned that month?
+SELECT
+	MONTH_ID,
+	ROUND(SUM(sales), 3) AS REVENUE
+FROM sales_data
+WHERE YEAR_ID = 2003
+GROUP BY MONTH_ID
+ORDER BY 2 DESC;
+
+-- Who is our best customer (this could be best answered with RFM)
+CREATE VIEW rfm_data AS
+		SELECT c.*,
+			CONCAT(CAST(rfm_recency AS CHAR), CAST(rfm_frequency AS CHAR), CAST(rfm_monetary AS CHAR)) AS rfm_cell_string
+		FROM (
+			SELECT rfm.*,
+				NTILE(4) OVER(ORDER BY Recency DESC) AS rfm_recency,
+				NTILE(4) OVER(ORDER BY Frequency_Order) AS rfm_frequency,
+				NTILE(4) OVER(ORDER BY Monetary_Value) AS rfm_monetary
+			FROM (
+				SELECT
+					CUSTOMERNAME,
+					ROUND(SUM(sales), 3) AS Monetary_Value,
+					ROUND(AVG(sales), 3) AS Average_Mon_Val,
+					ROUND(COUNT(ORDERNUMBER), 3) AS Frequency_Order,
+					MAX(ORDERDATE) AS Last_order_date,
+					(SELECT MAX(ORDERDATE) FROM sales_data) AS Max_order_date,
+					DATEDIFF((SELECT MAX(ORDERDATE) FROM sales_data), MAX(ORDERDATE)) AS Recency
+				FROM sales_data
+				GROUP BY CUSTOMERNAME
+			) rfm
+		) c;
+        
+SELECT
+	CUSTOMERNAME,
+    rfm_recency,
+    rfm_frequency,
+    rfm_monetary,
+    (CASE
+		WHEN rfm_cell_string IN (111, 112, 121, 122, 123, 132, 211, 212, 114, 141) THEN 'Lost Customers'
+        WHEN rfm_cell_string IN (133, 134, 143, 244, 334, 343, 344) THEN 'Slipping away, cannot lose'
+        WHEN rfm_cell_string IN (311, 411, 331) THEN 'New Customers'
+        WHEN rfm_cell_string IN (222, 223, 233, 322) THEN 'Potential churners'
+        WHEN rfm_cell_string IN (323, 333, 321, 422, 332, 432) THEN 'Active'
+        WHEN rfm_cell_string IN (433, 434, 443, 444) THEN 'Loyal'
+	END) AS rfm_segment
+FROM rfm_data;
+
+SELECT * FROM rfm_data;
+
+-- What products are most often sold together?
+SELECT
+	ORDERNUMBER,
+    COUNT(ORDERNUMBER) AS total
+FROM sales_data
+WHERE STATUS = 'Shipped'
+GROUP BY ORDERNUMBER

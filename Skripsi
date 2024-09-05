@@ -1,0 +1,1465 @@
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+#include <conio.h>
+#include <stdio.h>
+#include <math.h>
+#include <fstream>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+// format bil bulat
+int jumlah_aktivitas, jumlah_pelajar;
+int jenisdata;
+
+// data koneksi
+int data_persediaan[500], data_pendahulu[500][500], data_kebutuhan[500][500], data_durasi[500];
+int tipe_kebutuhan, jumlah_pendahulu, database_kebutuhan_aktivitas[500], database_pendahulu_aktivitas[500];
+
+float hmcr, par, bandwidth, datafitness, tempf1[500], random1, random2, maksimalnya;
+float r_1[500], r_2[500], p_1[500], p_2[500], p_3[500], epsilon[500];
+int max_iter, terbaik, terburuk, tf, terbaiknya;
+int hms, p, i_vsb;
+
+char karakter, aktivitas[500], masukan[500];
+double pelajar[100][500][500];
+float fungsi_tujuan[500][500], fitness[100][500];
+int urutan_kegiatan[100][500][500], st_final[100][500][500], ft_final[100][500][500];
+
+ifstream file1;
+ifstream file2;
+ifstream file3;
+ifstream file4;
+ofstream nulis_txt;
+
+int bil_bulat(char aktivitas[100])
+{
+    for(int i=0; i<strlen(aktivitas); ++i)
+    {
+        karakter = aktivitas[i];
+        
+        if(karakter < '0' || karakter > '9')
+        {
+            return -1;
+        }
+    }
+    return atoi(aktivitas);
+}
+
+float bil_real(char masukan[100])
+{
+    int banyak_koma = 1;
+
+    for(int i2=0; i2<strlen(masukan); ++i2)
+    {
+        karakter = masukan[i2];
+
+        if(i2 > 0 && karakter == '.' && banyak_koma == 1)
+        {
+            banyak_koma++;
+        }
+        else if(karakter < '0' || karakter > '9')
+        {
+            return -1;
+        }
+    }
+    return atof(masukan);
+}
+
+// MENGINPUTKAN DATA
+void menginputkan_data()
+{
+    cout<<"Jenis Data RCPSP :"<<endl;
+    cout<<" 1. Data Kecil"<<endl;
+    cout<<" 2. Data Sedang"<<endl;
+    cout<<" 3. Data Besar"<<endl<<endl;
+    nulis_txt<<"Jenis Data RCPSP :"<<endl;
+    nulis_txt<<" 1. Data Kecil"<<endl;
+    nulis_txt<<" 2. Data Sedang"<<endl;
+    nulis_txt<<" 3. Data Besar"<<endl<<endl;
+
+        atas0:
+        cout<<"Pilih Jenis Data yang Ingin Digunakan (1/2/3) = ";cin.getline (masukan,sizeof(masukan));
+        jenisdata = bil_bulat(masukan);
+
+        if (jenisdata == 1)
+        {
+            nulis_txt<<"Pilih Jenis Data yang Ingin Digunakan (1/2/3) = ";
+            nulis_txt<<masukan<<endl<<endl;
+            cout<<endl;
+            cout<<"Data yang dipilih adalah Data Kecil"<<endl;
+            nulis_txt<<"Data yang dipilih adalah Data Kecil"<<endl;
+            nulis_txt<<endl;
+            jumlah_aktivitas = 10;
+            cout<<"Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+            nulis_txt<<" Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+        }
+
+        else if (jenisdata == 2)
+        {
+            nulis_txt<<"Pilih Jenis Data yang Ingin Digunakan (1/2/3) = ";
+            nulis_txt<<masukan<<endl<<endl;
+            cout<<endl;
+            cout<<"Data yang dipilih adalah Data Sedang"<<endl;
+            nulis_txt<<"Data yang dipilih adalah Data Sedang"<<endl;
+            nulis_txt<<endl;
+            jumlah_aktivitas = 25;
+            cout<<"Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+            nulis_txt<<" Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+
+        }
+
+        else if (jenisdata == 3)
+        {
+            nulis_txt<<"Pilih Jenis Data yang Ingin Digunakan (1/2/3) = ";
+            nulis_txt<<masukan<<endl<<endl;
+            cout<<endl;
+            cout<<"Data yang dipilih adalah Data Besar"<<endl;
+            nulis_txt<<"Data yang dipilih adalah Data Besar"<<endl;
+            nulis_txt<<endl;
+            jumlah_aktivitas = 60;
+            cout<<"Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+            nulis_txt<<" Banyak Aktivitas = "<<jumlah_aktivitas<<endl;
+        }
+
+        else
+        {
+            nulis_txt<<"Pilih Jenis Data yang Ingin Digunakan (1/2/3) = ";
+            nulis_txt<<masukan<<endl<<endl;
+            cout<<endl;
+            cout<<"File Data Tidak Ditemukan!"<<endl<<endl;
+            nulis_txt<<"Data yang dipilih adalah Data Besar"<<endl<<endl;
+            goto atas0;
+        }
+}
+
+// INISIALISASI PARAMETER
+void inisialisasi_parameter()
+{
+    bandwidth = 0.1;
+    cout<<"Nilai Bandwidth = "<<bandwidth<<endl;
+    nulis_txt<<"Nilai Bandwidth = "<<bandwidth<<endl;
+
+    par = 0.3;
+    cout<<"Nilai PAR = "<<par<<endl;
+    nulis_txt<<"Nilai PAR = "<<par<<endl;
+
+    atas1:
+    cout<<endl;
+    nulis_txt<<endl;
+    cout<<"Input Nilai HMCR (0<=HMCR<=1) = ";
+    nulis_txt<<"Input Nilai HMCR (0<=HMCR<=1) = ";
+    cin.getline(masukan,sizeof(masukan));
+    nulis_txt<<masukan<<endl;
+    
+    hmcr = bil_real(masukan);
+    if (hmcr<0 || hmcr>1)
+    {
+        cout<<"Data yang Anda Masukkan Salah!"<<endl;
+        nulis_txt<<"Data yang Anda Masukkan Salah!"<<endl;
+        goto atas1;
+    }
+
+    atas2:
+    nulis_txt<<endl;
+    cout<<"Masukkan Banyak Pelajar = ";
+    nulis_txt<<"Masukkan Banyak Pelajar = ";
+    cin.getline(masukan,sizeof(masukan));
+    nulis_txt<<masukan<<endl;
+    jumlah_pelajar = bil_bulat(masukan);
+    if (jumlah_pelajar <= 1)
+    {
+        cout<<"Pelajar Harus Lebih Dari 1!"<<endl;
+        nulis_txt<<"Pelajar Harus Lebih Dari 1!"<<endl;
+        goto atas2;
+    }
+
+    atas3:
+    nulis_txt<<endl;
+    cout<<"Masukkan Maksimum Iterasi = ";
+    nulis_txt<<"Masukkan Maksimum Iterasi = ";
+    cin.getline(masukan,sizeof(masukan));
+    nulis_txt<<masukan<<endl;
+    max_iter = bil_bulat(masukan);
+    if (max_iter <= 0)
+    {
+        cout<<"Iterasi Tidak Boleh di Bawah 1!"<<endl;
+        nulis_txt<<"Iterasi Tidak Boleh di Bawah 1!"<<endl;
+        goto atas3;
+    }
+    nulis_txt<<endl;
+}
+
+// MEMBANGKITKAN POPULASI AWAL
+void membangkitkan_populasi_awal()
+{
+    for (int i = 0; i < jumlah_pelajar; ++i)
+    {
+        for (int j = 0; j < jumlah_aktivitas; ++j)
+        {
+            double value = (rand() % 100) + 0.1;
+            double divider = 99;
+
+            double random_generator = value / divider;
+            pelajar[0][i][j] = random_generator;
+        }
+    }
+
+    //   Menampilkan Tabel Populasi Awal
+    nulis_txt<<"Tabel Populasi Awal"<<endl;
+    for (int i = 0; i < jumlah_aktivitas; ++i)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|          |";
+
+    for (int i = 0; i < jumlah_aktivitas; ++i )
+    {
+        nulis_txt<<" MP("<< setw(2) << i+1 <<")   |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|---------|";
+
+    for (int i = 0; i < jumlah_aktivitas; ++i)
+    {
+        nulis_txt<<"---------|";
+    }
+    nulis_txt<<endl;
+
+    for (int i = 0; i < jumlah_pelajar; ++i)
+    {
+        nulis_txt<<"| Pel("<< setw(2) << i+1 <<") |";
+        for (int j = 0; j < jumlah_aktivitas; ++j)
+        {
+            nulis_txt<< setw(9) << fixed << setprecision(5) << pelajar[0][i][j] <<"|";
+        }
+        nulis_txt<<endl;
+    }
+    for (int i = 0; i < jumlah_aktivitas; ++i)
+    {
+        nulis_txt<<"===========";
+    }
+    nulis_txt<<endl<<endl;
+}
+
+// MENGHITUNG NILAI FUNGSI TUJUAN
+void penentuan_durasi_dan_jadwal(int indeks_baru,int pelajar_ke, int jumlah_pelajar) 
+{ 
+double matriks_prioritas[1000],prioritas_eligible_table[1000]; 
+int sumber_daya[1000],kegiatan[1000],st[1000],ft[1000],jadwal_array[1000]; 
+int status_eligible[1000],aktivitas_selesai[1000]; 
+
+for (int pel=0; pel<jumlah_pelajar; pel++)
+{
+    for(int sd1=0;sd1<tipe_kebutuhan;sd1++) 
+    { 
+        sumber_daya[sd1]=data_persediaan[sd1]; //data_persediaan cek di R5
+    } 
+
+    for (int sd2=0; sd2<jumlah_aktivitas; sd2++)
+    {
+        matriks_prioritas[sd2] = pelajar[indeks_baru][pel][sd2];
+    }
+
+    for(int sd3=0;sd3<jumlah_aktivitas;sd3++) 
+    { 
+        prioritas_eligible_table[sd3]=0; 
+        kegiatan[sd3]=1; 
+        ft[sd3]=0; 
+        st[sd3]=0; 
+        aktivitas_selesai[sd3]=0; 
+        jadwal_array[sd3]=0; 
+    } 
+
+    int penuhi=0; 
+    int list_selesai=0; 
+    int banyak_pendahulu=0; 
+    int urutan_jadwal=0; 
+    int tnow=0; 
+    int tercepat=0; 
+    int indikator_berhenti=0; 
+
+    do
+    { 
+        for(int act=0;act<jumlah_aktivitas;act++) 
+        {
+            if(kegiatan[act]==1) 
+            { 
+                if(data_pendahulu[act][0]==0) 
+                { 
+                    for(int act2=0;act2<tipe_kebutuhan;act2++) 
+                    { 
+                        if(sumber_daya[act2]>=data_kebutuhan[act][act2]) 
+                        { 
+                            penuhi=penuhi+1; 
+                        } 
+
+                        else if(sumber_daya[act2]<data_kebutuhan[act][act2]) 
+                        { 
+                            penuhi=penuhi+0; 
+                        } 
+                    } 
+
+                    if(penuhi==tipe_kebutuhan) 
+                    { 
+                        prioritas_eligible_table[act]=matriks_prioritas[act]; 
+                        status_eligible[act]=1; 
+                    } 
+                
+                    else if(penuhi!=tipe_kebutuhan) 
+                    { 
+                        prioritas_eligible_table[act]=0; 
+                        status_eligible[act]=0; 
+                    } 
+            
+                penuhi=0; 
+                } 
+    
+                else if(data_pendahulu[act][0]!=0) 
+                { 
+                    for(int ref=0;ref<jumlah_pendahulu;ref++) 
+                    { 
+                        if(data_pendahulu[act][ref]!=0)
+                        { 
+                            banyak_pendahulu=banyak_pendahulu+1; 
+                            
+                            for(int res=0;res<jumlah_aktivitas;res++) 
+                            { 
+                                if(data_pendahulu[act][ref]==aktivitas_selesai[res]) 
+                                { 
+                                    list_selesai=list_selesai+1; 
+                                } 
+                            
+                                else if(data_pendahulu[act][ref]!=aktivitas_selesai[res]) 
+                                { 
+                                    list_selesai=list_selesai+0; 
+                                } 
+                            } 
+                        } 
+    
+                        else if(data_pendahulu[act][ref]==0) 
+                        { 
+                            banyak_pendahulu=banyak_pendahulu+0; 
+                        } 
+                    } 
+    
+                    if(banyak_pendahulu==list_selesai) 
+                    { 
+                        for(int act2=0;act2<tipe_kebutuhan;act2++) 
+                        { 
+                            if(sumber_daya[act2]>=data_kebutuhan[act][act2]) 
+                            { 
+                                penuhi=penuhi+1; 
+                            } 
+
+                            else if(sumber_daya[act2]<data_kebutuhan[act][act2]) 
+                            { 
+                                penuhi=penuhi+0; 
+                            } 
+                        } 
+                    
+                        if(penuhi==tipe_kebutuhan) 
+                        { 
+                            prioritas_eligible_table[act]=matriks_prioritas[act]; 
+                            status_eligible[act]=1; 
+                        } 
+
+                        else if(penuhi!=tipe_kebutuhan) 
+                        { 
+                            prioritas_eligible_table[act]=0; 
+                            status_eligible[act]=0; 
+                        } 
+                    } 
+    
+                    else if(banyak_pendahulu!=list_selesai) 
+                    { 
+                        prioritas_eligible_table[act]=0; 
+                        status_eligible[act]=0; 
+                    } 
+    
+                penuhi=0; 
+                banyak_pendahulu=0; 
+                list_selesai=0; 
+                } 
+            } 
+
+            else if(kegiatan[act]==0) 
+            { 
+                prioritas_eligible_table[act]=0; 
+                status_eligible[act]=0; 
+            }
+        }
+    //   Bagian update parameter 
+        int eligible_remain=0; 
+
+        for(int el=0;el<jumlah_aktivitas;el++) 
+        { 
+            eligible_remain=eligible_remain+status_eligible[el]; 
+        } 
+
+        if(eligible_remain>0) 
+        { 
+            int indeks_terjadwal=0; 
+            double prioritas_terjadwal=0; 
+        
+            for(int akt=0;akt<jumlah_aktivitas;akt++) 
+            { 
+                if(prioritas_eligible_table[akt]>prioritas_terjadwal) 
+                { 
+                    prioritas_terjadwal=prioritas_eligible_table[akt]; 
+                    indeks_terjadwal=akt; 
+                } 
+            } 
+
+            kegiatan[indeks_terjadwal]=0;
+
+            st[indeks_terjadwal]=tnow;
+            st_final[indeks_baru][pel][indeks_terjadwal] = st[indeks_terjadwal];
+
+            ft[indeks_terjadwal]=tnow+data_durasi[indeks_terjadwal];
+            ft_final[indeks_baru][pel][indeks_terjadwal] = ft[indeks_terjadwal];
+
+            jadwal_array[urutan_jadwal]=indeks_terjadwal+1;
+            urutan_kegiatan[indeks_baru][pel][urutan_jadwal] = jadwal_array[urutan_jadwal];
+
+            for(int akt2=0;akt2<tipe_kebutuhan;akt2++) 
+            { 
+                sumber_daya[akt2]=sumber_daya[akt2]-data_kebutuhan[indeks_terjadwal][akt2]; 
+            }
+        urutan_jadwal++; 
+        } 
+
+        else if(eligible_remain==0) 
+        { 
+            tercepat=1000; 
+
+            for(int s=0;s<jumlah_aktivitas;s++) 
+            { 
+                if(ft_final[indeks_baru][pel][s]>tnow && ft_final[indeks_baru][pel][s]<tercepat) 
+                { 
+                    tercepat=ft_final[indeks_baru][pel][s]; 
+                } 
+            } 
+    
+            for(int s=0;s<=jumlah_aktivitas-1;s++) 
+            { 
+                if(ft_final[indeks_baru][pel][s]==tercepat) 
+                { 
+                    aktivitas_selesai[s]=s+1;
+                
+                    for(int r=0;r<tipe_kebutuhan;r++) 
+                    { 
+                        sumber_daya[r]=sumber_daya[r]+data_kebutuhan[s][r]; 
+                    } 
+                } 
+            } 
+        }
+
+        tnow=tercepat; 
+        indikator_berhenti=0; 
+
+        for(int stop=0;stop<jumlah_aktivitas;stop++) 
+        { 
+            indikator_berhenti=indikator_berhenti+kegiatan[stop]; 
+        } 
+    } while(indikator_berhenti!=0);
+
+    int dur=0;
+
+    for(int time=0;time<jumlah_aktivitas;time++) 
+    { 
+        if(ft_final[indeks_baru][pel][time]>dur) 
+        { 
+            dur=ft_final[indeks_baru][pel][time];
+        } 
+    }
+    fungsi_tujuan[indeks_baru][pel] = dur;
+    cout<<endl;
+}
+}
+
+// MENGHITUNG NILAI FITNESS
+void hitung_nilai_fitness (int indeks_baru,int pelajar_ke, int jumlah_pelajar)
+{
+    for (int pel1=0; pel1<jumlah_pelajar; ++pel1)
+    {
+        fitness[indeks_baru][pel1]=1/fungsi_tujuan[indeks_baru][pel1];
+    }
+}
+
+void menampilkan_nilai_fitness(int indeks_baru,int pelajar_ke, int jumlah_pelajar, int iterasike)
+{
+    nulis_txt<<endl;
+    nulis_txt<<"Nilai Fitness Pelajar"<<endl;
+    nulis_txt<<"==============================="<<endl;
+
+    for (int pel1=0; pel1<jumlah_pelajar; ++pel1)
+    {
+        fitness[indeks_baru][pel1]=1/fungsi_tujuan[indeks_baru][pel1];
+
+        //   menampilkan nilai fitness
+        nulis_txt<<"Fitness(X"<<pel1+1<<") = "<<fitness[indeks_baru][pel1]<<endl;
+    }
+    nulis_txt<<endl;
+}
+
+// MENGIDENTIFIKASI PELAJAR TERBAIK
+void identifikasi_pelajar_terbaik()
+{
+    datafitness = fitness[0][0];
+    terbaik = 0;
+    for (int pel2 = 0; pel2<jumlah_pelajar; ++pel2)
+    {
+        if (datafitness < fitness[0][pel2])
+        {
+            datafitness = fitness[0][pel2];
+            terbaik = pel2;
+        }
+    }
+}
+
+void menampilkan_pelajar_terbaik(int iterasike)
+{
+    //   menampilkan pelajar terbaik
+    nulis_txt<<"Pelajar Terbaik (Guru) yaitu Pelajar "<<terbaik+1<<endl;
+    nulis_txt<<"Fitness(X"<<terbaik+1<<") = "<<fitness[0][terbaik]<<endl;
+
+    for (int akt=0; akt<jumlah_aktivitas; ++akt)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|          |";
+
+    for (int akt1=0; akt1<jumlah_aktivitas; ++akt1)
+    {
+        nulis_txt<<" MP ("<<setw(2)<<akt1+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|-----------|";
+
+    for (int akt2=0; akt2<jumlah_aktivitas; ++akt2)
+    {
+        nulis_txt<<"----------|";
+    }
+    nulis_txt<<endl;
+    
+    nulis_txt<<"| Pel("<<setw(2)<<terbaik+1<<") |";
+
+    for (int akt3=0; akt3<jumlah_aktivitas; ++akt3)
+    {
+        nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[0][terbaik][akt3]<<"|";
+    }
+    nulis_txt<<endl;
+
+    for (int akt4=0; akt4<jumlah_aktivitas; ++akt4)
+    {
+        nulis_txt<<"===========";
+    }
+    nulis_txt<<endl<<endl;
+}
+
+// MENGHITUNG SOLUSI BARU (FASE GURU)
+void menghitung_solusi_baru()
+{
+    //   menghitung mean
+    for (int akt5=0; akt5<jumlah_aktivitas; ++akt5)
+    {
+        pelajar[0][jumlah_pelajar][akt5]=0;
+
+        for(int pel3=0; pel3<jumlah_pelajar; ++pel3)
+        {
+            pelajar[0][jumlah_pelajar][akt5] = pelajar[0][jumlah_pelajar][akt5] + pelajar[0][pel3][akt5];
+        }
+        pelajar[0][jumlah_pelajar][akt5] = pelajar[0][jumlah_pelajar][akt5]/jumlah_pelajar;
+    }
+
+    for(int akt6=0; akt6<jumlah_aktivitas; ++akt6)
+    {
+        tempf1[akt6] = pelajar[0][terbaik][akt6]; 
+    }
+
+    //   menghitung solusi baru
+    random2 = float (rand())/RAND_MAX;
+    
+    if(random2>=0.5)
+    {
+        tf=2;
+    }
+    else
+    {
+        tf=1;
+    }
+
+    random1= float (rand())/RAND_MAX;
+
+    for (int pel4=0; pel4<jumlah_pelajar; ++pel4)
+    {
+        for (int akt7=0; akt7<jumlah_aktivitas; ++akt7)
+        {
+            pelajar[1][pel4][akt7] = pelajar[0][pel4][akt7] + (random1*(tempf1[akt7] - (tf*pelajar[0][jumlah_pelajar][akt7])));
+
+            if(pelajar[1][pel4][akt7] < 0)
+            {
+                pelajar[1][pel4][akt7] = -1 * pelajar[1][pel4][akt7];
+            }
+        }
+    }
+}
+
+void menampilkan_solusi_baru(int iterasike)
+{
+       //   menampilkan tabel populasi hasil fase guru
+    nulis_txt<<"Tabel Populasi Baru (Hasil Fase Guru)"<<endl;
+
+    for(int akt8=0; akt8<jumlah_aktivitas; ++akt8)
+    {
+        nulis_txt<<"===========";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|          |";
+
+    for(int akt9=0; akt9<jumlah_aktivitas; ++akt9)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt9+1<<")   |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|----------|";
+
+    for(int akt10=0; akt10<jumlah_aktivitas; ++akt10)
+    {
+        nulis_txt<<"----------|";
+    }
+    nulis_txt<<endl;
+
+    for(int pel5=0; pel5<jumlah_pelajar; ++pel5)
+    {
+        nulis_txt<<"| Pel("<<setw(2)<<pel5+1<<") |";
+
+        for (int akt11=0; akt11<jumlah_aktivitas; ++akt11)
+        {
+            nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[1][pel5][akt11]<<"|";
+        }
+        nulis_txt<<endl;
+    }
+
+    for(int akt12=0; akt12<jumlah_aktivitas; ++akt12)
+    {
+        nulis_txt<<"=========";
+    }
+    nulis_txt<<endl;
+}
+
+// UPDATE NILAI FITNESS PELAJAR
+void update_fitness_pelajar()
+{
+    for(int pel6=0; pel6 < jumlah_pelajar; ++pel6)
+    {
+        if(fitness[0][pel6] <= fitness[1][pel6])
+        {
+            fitness[0][pel6] = fitness[1][pel6];
+            fungsi_tujuan[0][pel6] = fungsi_tujuan[1][pel6];
+
+            for (int akt13=0; akt13<jumlah_aktivitas; ++akt13)
+            {
+                pelajar[0][pel6][akt13] = pelajar[1][pel6][akt13];
+            }
+
+            for(int akt13b=0; akt13b<jumlah_aktivitas; ++akt13b)
+            {
+                urutan_kegiatan[0][pel6][akt13b] = urutan_kegiatan[1][pel6][akt13b];
+                st_final[0][pel6][akt13b] = st_final[1][pel6][akt13b];
+                ft_final[0][pel6][akt13b] = ft_final[1][pel6][akt13b];
+            }
+        }
+    }
+}
+
+void menampilkan_update_fitness_pelajar(int iterasike)
+{
+    nulis_txt<<endl<<endl;
+
+    //   menampilkan tabel populasi setelah update fitness pelajar
+    nulis_txt<<"Tabel Populasi Saat Ini (Setelah Update Fitness Pelajar)"<<endl;
+
+    for(int akt14=0; akt14<jumlah_aktivitas; ++akt14)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt15=0; akt15<jumlah_aktivitas; ++akt15)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt15+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|--------|";
+
+    for(int akt16=0; akt16<jumlah_aktivitas; ++akt16)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    for(int pel7=0; pel7<jumlah_pelajar; ++pel7)
+    {
+        nulis_txt<<"| Pel("<<setw(2)<<pel7+1<<")  |";
+
+        for(int akt17=0; akt17<jumlah_aktivitas; ++akt17)
+        {
+            nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[0][pel7][akt17]<<"|";
+        }
+        nulis_txt<<endl;
+    }
+
+    for(int akt18=0; akt18<jumlah_aktivitas; ++akt18)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl<<endl<<endl;
+}
+
+//INTERAKSI ANTAR PELAJAR (FASE PELAJAR)
+void interaksi_antar_pelajar(int pelajar_ke)
+{
+    for(int pel8=0; pel8<jumlah_pelajar; ++pel8)
+    {
+        if(pelajar_ke==pel8)
+        {
+            for(int akt19=0; akt19<jumlah_aktivitas; ++akt19)
+            {
+                pelajar[2][pel8][akt19] = pelajar[0][pel8][akt19];
+
+                if(pelajar[2][pel8][akt19] < 0)
+                {
+                    pelajar[2][pel8][akt19] = -1 * pelajar[2][pel8][akt19];
+                }
+            }
+        }
+
+        else
+        {
+            if(fitness[0][pel8] == fitness[0][pelajar_ke])
+            {
+                for(int akt20=0; akt20<jumlah_aktivitas; ++akt20)
+                {
+                    pelajar[2][pel8][akt20] = pelajar[0][pel8][akt20];
+  
+                    if(pelajar[2][pel8][akt20] < 0)
+                    {
+                        pelajar[2][pel8][akt20] = -1 * pelajar[2][pel8][akt20];
+                    }
+                }
+            }
+
+            else if(fitness[0][pel8] < fitness[0][pelajar_ke])
+            {
+                for(int akt21=0; akt21<jumlah_aktivitas; ++akt21)
+                {
+                    pelajar[2][pel8][akt21] = pelajar[0][pelajar_ke][akt21] + random1*(pelajar[0][pelajar_ke][akt21] - pelajar[0][pel8][akt21]);
+                
+                    if(pelajar[2][pel8][akt21] < 0)
+                    {
+                        pelajar[2][pel8][akt21] = -1 * pelajar[2][pel8][akt21];
+                    }
+                }
+            }
+
+            else
+            {
+                for(int akt22=0; akt22<jumlah_aktivitas; ++akt22)
+                {
+                    pelajar[2][pel8][akt22] = pelajar[0][pelajar_ke][akt22] + random1*(pelajar[0][pel8][akt22] - pelajar[0][pelajar_ke][akt22]);
+                
+                    if(pelajar[2][pel8][akt22] < 0)
+                    {
+                        pelajar[2][pel8][akt22] = -1 * pelajar[2][pel8][akt22];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void menampilkan_interaksi_pelajar(int pelajar_ke, int iterasike)
+{
+    nulis_txt<<endl<<endl;
+    nulis_txt<<"Interaksi Pelajar "<<pelajar_ke+1<<" dengan : "<<endl;
+    //   menampilkan tabel interaksi antar pelajar
+    for(int akt23=0; akt23<jumlah_aktivitas; ++akt23)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt24=0; akt24<jumlah_aktivitas; ++akt24)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt24+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|--------|";
+
+    for(int akt25=0; akt25<jumlah_aktivitas; ++akt25)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    for(int pel9=0; pel9<jumlah_pelajar; ++pel9)
+    {
+        nulis_txt<<"| Pel("<<setw(2)<<pel9+1<<")  |";
+
+        for(int akt26=0; akt26<jumlah_aktivitas; ++akt26)
+        {
+            nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[2][pel9][akt26]<<"|";
+        }
+        nulis_txt<<endl;
+    }
+
+    for(int akt27=0; akt27<jumlah_aktivitas; ++akt27)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl;
+}
+
+//SIMPAN PELAJAR P TERBAIK
+void simpan_pelajar_p_terbaik(int pelajar_ke)
+{
+    maksimalnya = fitness[2][0];
+    terbaiknya = 0;
+
+    for(int pel10=0; pel10<jumlah_pelajar; ++pel10)
+    {
+        if(maksimalnya <= fitness[2][pel10])
+        {
+            maksimalnya = fitness[2][pel10];
+            terbaiknya = pel10;
+        }
+    }
+
+    fitness[1][pelajar_ke] = fitness[2][terbaiknya];
+    fungsi_tujuan[1][pelajar_ke] = fungsi_tujuan[2][terbaiknya];
+
+    for(int akt28=0; akt28<jumlah_aktivitas; ++akt28)
+    {
+        pelajar[1][pelajar_ke][akt28] = pelajar[2][terbaiknya][akt28];
+    }
+
+    for(int akt28b=0; akt28b<jumlah_aktivitas; ++akt28b)
+    {
+        urutan_kegiatan[1][pelajar_ke][akt28b] = urutan_kegiatan[1][terbaiknya][akt28b];
+        st_final[1][pelajar_ke][akt28b] = st_final[1][terbaiknya][akt28b];
+        ft_final[1][pelajar_ke][akt28b] = ft_final[1][terbaiknya][akt28b];
+    }
+}
+
+void menampilkan_pelajar_p_terbaik(int pelajar_ke, int iterasike)
+{
+    //   menampilkan simpan pelajar p terbaik
+    nulis_txt<<"Fitness Terbaik Pelajar "<<pelajar_ke+1<<" Setelah Berinteraksi dengan Semua Pelajar = "<<fitness[1][pelajar_ke]<<endl;
+
+    for(int akt29=0; akt29<jumlah_aktivitas; ++akt29)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt30=0; akt30<jumlah_aktivitas; ++akt30)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt30+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|--------|";
+
+    for(int akt31=0; akt31<jumlah_aktivitas; ++akt31)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    nulis_txt<<"| Pel("<<setw(2)<<pelajar_ke+1<<") |";
+
+    for(int akt32=0; akt32<jumlah_aktivitas; ++akt32)
+    {
+        nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[1][pelajar_ke][akt32]<<"|";
+    }
+    nulis_txt<<endl;
+    
+    for(int akt33=0; akt33<jumlah_aktivitas; ++akt33)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl;
+}
+
+//MENGIDENTIFIKASI PELAJAR TERBURUK PADA HM
+void identifikasi_pelajar_terburuk()
+{
+    datafitness = fitness[0][0];
+    terburuk = 0;
+
+    for(int pel11=0; pel11<jumlah_pelajar; ++pel11)
+    {
+        if(datafitness > fitness[0][pel11])
+        {
+            datafitness = fitness[0][pel11];
+            terburuk = pel11;
+        }
+    }
+}
+
+void menampilkan_pelajar_terburuk(int iterasike)
+{
+        // menampilkan pelajar terburuk
+    nulis_txt<<"Pelajar Terburuk pada Harmony Memory : Pelajar"<<terburuk+1<<endl;
+    nulis_txt<<"Fitness(X"<<terburuk+1<<") = "<<fitness[0][terburuk]<<endl;
+
+    for(int akt34=0; akt34<jumlah_aktivitas; ++akt34)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt35=0; akt35<jumlah_aktivitas; ++akt35)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt35+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|---------|";
+
+    for(int akt36=0; akt36<jumlah_aktivitas; ++akt36)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    nulis_txt<<"| Pel("<<setw(2)<<terburuk+1<<") |";
+
+    for(int akt37=0; akt37<jumlah_aktivitas; ++akt37)
+    {
+        nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[1][terburuk][akt37]<<"|";
+    }
+    nulis_txt<<endl;
+    
+    for(int akt38=0; akt38<jumlah_aktivitas; ++akt38)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl<<endl<<endl;
+}
+
+//PROSES PEMBULATAN
+float INT(float a)
+{
+    int b = a;
+
+    if(a - b >= 0.5)
+    {
+        return (b+1);
+    }
+    else
+    {
+        return b;
+    }
+}
+
+//MEMBANGKITKAN VEKTOR SOLUSI BARU
+void membangkitkan_vsb()
+{
+    int i = 0;
+
+    for(int akt39=0; akt39<jumlah_aktivitas; ++akt39)
+    {
+        r_1[akt39] = float (rand())/RAND_MAX;
+
+        if(r_1[akt39] <= hmcr)
+        {
+            hms = jumlah_pelajar;
+            p_1[akt39] = 1 +((hms-1)*r_1[akt39]);
+            p = INT(p_1[akt39]);
+            p_2[akt39] = pelajar[0][p-1][akt39];
+
+            r_2[akt39] = float (rand())/RAND_MAX;
+
+            if(r_2[akt39] <= par)
+            {
+                epsilon[akt39] = 1 - (2*(float (rand())/RAND_MAX));
+                p_3[akt39] = p_2[akt39] + (bandwidth*epsilon[akt39]);
+                pelajar[3][i][akt39] = p_3[akt39];
+            }
+
+            else
+            {
+                pelajar[3][i][akt39] = p_2[akt39];
+            }
+        }
+
+        else
+        {
+            r_2[akt39] = float (rand())/RAND_MAX;
+            pelajar[3][i][akt39] = r_2[akt39];
+        }
+
+        if(pelajar[3][i][akt39] < 0)
+        {
+            pelajar[3][i][akt39] = -1*pelajar[3][i][akt39];
+        }
+    }
+}
+
+void menampilkan_vsb(int iterasike)
+{
+    int i = 0;
+    
+    //   menampilkan tabel VSB
+    nulis_txt<<"Tabel Hasil Vektor Solusi Baru (VSB)"<<endl;
+
+    for(int akt40=0; akt40<jumlah_aktivitas; ++akt40)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt41=0; akt41<jumlah_aktivitas; ++akt41)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt41+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|---------|";
+
+    for(int akt42=0; akt42<jumlah_aktivitas; ++akt42)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    nulis_txt<<"| VSB "<<setw(2)<<" |";
+
+    for(int akt43=0; akt43<jumlah_aktivitas; ++akt43)
+    {
+        nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[3][i][akt43]<<"|";
+    }
+    nulis_txt<<endl;
+    
+    for(int akt44=0; akt44<jumlah_aktivitas; ++akt44)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl;
+}
+
+//UPDATE HARMONY MEMORY
+void update_hm()
+{
+    int i2 = 0;
+    
+    if(fitness[0][terburuk] <= fitness[3][i2])
+    {
+        fitness[0][terburuk] = fitness[3][i2];
+        fungsi_tujuan[0][terburuk] = fungsi_tujuan[3][i2];
+
+        for(int akt45=0; akt45<jumlah_aktivitas; ++akt45)
+        {
+            pelajar[0][terburuk][akt45] = pelajar[3][i2][akt45];
+        }
+
+        for(int akt45b=0; akt45b<jumlah_aktivitas; ++akt45b)
+        {
+            urutan_kegiatan[0][terburuk][akt45b] = urutan_kegiatan[3][i2][akt45b];
+            st_final[0][terburuk][akt45b] = st_final[3][i2][akt45b];
+            ft_final[0][terburuk][akt45b] = ft_final[3][i2][akt45b];
+        }
+    }
+
+    else;
+}
+
+void menampilkan_update_hm(int iterasike)
+{
+    int i2 = 0;
+    nulis_txt<<endl;
+
+    if(fitness[0][terburuk] <= fitness[3][i2])
+    {
+        nulis_txt<<"Diperoleh Nilai Fitness VSB lebih baik dari Pelajar Terburuk HM (Pelajar "<<terburuk+1<<")"<<endl;
+    }
+    else
+    {
+        nulis_txt<<"Dipeoleh Nilai Fitness VSB tidak lebih baik dari Pelajar Terburuk HM"<<endl;
+    }
+    nulis_txt<<endl;
+
+    //   menampilkan tabel update HM
+    nulis_txt<<"Tabel Harmony Memory (Update)"<<endl;
+
+    for(int akt46=0; akt46<jumlah_aktivitas; ++akt46)
+    {
+        nulis_txt<<"============";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|           |";
+
+    for(int akt47=0; akt47<jumlah_aktivitas; ++akt47)
+    {
+        nulis_txt<<" MP("<<setw(2)<<akt47+1<<")  |";
+    }
+    nulis_txt<<endl;
+    nulis_txt<<"|---------|";
+
+    for(int akt48=0; akt48<jumlah_aktivitas; ++akt48)
+    {
+        nulis_txt<<"--------|";
+    }
+    nulis_txt<<endl;
+
+    for(int pel12=0; pel12<jumlah_pelajar; ++pel12)
+    {
+        nulis_txt<<"| Pel("<<setw(2)<<pel12+1<<") |";
+        
+        for(int akt49=0; akt49<jumlah_aktivitas; ++akt49)
+        {
+            nulis_txt<<setw(9)<<fixed<<setprecision(5)<<pelajar[0][pel12][akt49]<<"|";
+        }
+        nulis_txt<<endl;
+    }
+
+    for(int akt50=0; akt50<jumlah_aktivitas; ++akt50)
+    {
+        nulis_txt<<"==========";
+    }
+    nulis_txt<<endl<<endl;
+
+    //   menampilkan nilai fitness HM
+    nulis_txt<<"Nilai Fitness Pelajar (HM)"<<endl;
+    nulis_txt<<"==================================="<<endl;
+
+    for (int pel13=0; pel13<jumlah_pelajar; ++pel13)
+    {
+        nulis_txt<<"Fitness(X"<<pel13+1<<") = "<<fitness[0][pel13]<<endl;
+    }
+    nulis_txt<<endl;
+}
+
+void hasil_per_iterasi()
+{
+    cout<<"Urutan Penjadwalan Diperoleh = "<<endl;
+    nulis_txt<<"Urutan Penjadwalan Diperoleh = "<<endl;
+
+    for(int akt51=0; akt51<jumlah_aktivitas; akt51++)
+    {
+        cout<<urutan_kegiatan[0][terbaik][akt51]<<" ";
+        nulis_txt<<urutan_kegiatan[0][terbaik][akt51]<<" ";
+    }
+    cout<<endl<<endl;
+    nulis_txt<<endl<<endl;
+
+    int dur2 = 0;
+    for(int akt=0; akt<jumlah_aktivitas; akt++)
+    {
+        if(ft_final[0][terbaik][akt] > dur2)
+        {
+            dur2 = ft_final[0][terbaik][akt];
+        }
+    }
+    cout<<"Durasi terpendek = "<<dur2<<endl;
+    nulis_txt<<"Durasi terpendek = "<<dur2<<endl<<endl;
+}
+
+void menampilkan_pelajar_terbaik_final()
+{
+    cout<<"Urutan Penjadwalan Diperoleh = "<<endl;
+    nulis_txt<<"Urutan Penjadwalan Diperoleh = "<<endl;
+
+    for(int akt51=0; akt51<jumlah_aktivitas; akt51++)
+    {
+        cout<<urutan_kegiatan[0][terbaik][akt51]<<" ";
+        nulis_txt<<urutan_kegiatan[0][terbaik][akt51]<<" ";
+    }
+    cout<<endl<<endl;
+    nulis_txt<<endl<<endl;
+
+    cout<<"Jadwal Mulai dan Selesai Setiap Aktivitas"<<endl<<endl;
+    nulis_txt<<"Jadwal Mulai dan Selesai Setiap Aktivitas"<<endl<<endl;
+
+    for(int akt52=0; akt52<jumlah_aktivitas; akt52++)
+    {
+        cout<<"Waktu mulai aktivitas ke-"<<akt52+1<<" = "<<st_final[0][terbaik][akt52]<<" "<<endl;
+        nulis_txt<<"Waktu mulai aktivitas ke-"<<akt52+1<<" = "<<st_final[0][terbaik][akt52]<<" "<<endl;
+
+        cout<<"Waktu selesai aktivitas ke-"<<akt52+1<<" = "<<ft_final[0][terbaik][akt52]<<" "<<endl;
+        nulis_txt<<"Waktu selesai aktivitas ke-"<<akt52+1<<" = "<<ft_final[0][terbaik][akt52]<<" "<<endl;
+    }
+    cout<<endl<<endl;
+    nulis_txt<<endl<<endl;
+
+    int dur1 = 0;
+    for(int akt=0; akt<jumlah_aktivitas; akt++)
+    {
+        if(ft_final[0][terbaik][akt] > dur1)
+        {
+            dur1 = ft_final[0][terbaik][akt];
+        }
+    }
+    cout<<"Durasi terpendek = "<<dur1<<endl<<endl;
+    nulis_txt<<"Durasi terpendek = "<<dur1<<endl;
+}
+
+int main()
+{
+    srand(time(0));
+    int iterasike = 1;
+    char masukkan[150];
+
+    cout<<endl;
+    cout<<"Masukkan Nama File Penyimpanan Tanpa Format = ";cin.getline(masukkan, sizeof(masukkan));
+    nulis_txt<<"Masukkan Nama File Penyimpanan Tanpa Format = ";nulis_txt<<masukkan<<endl;
+    strcat(masukkan,".txt");
+    nulis_txt.open(masukkan);
+
+    cout<<endl<<endl;
+    cout<<"=========================================================================================="<<endl;
+    cout<<"  IMPLEMENTASI HYBRID ALGORITMA TEACHING LEARNING BASED OPTIMIZATION DAN HARMONY SEARCH  "<<endl;
+    cout<<"           UNTUK MENYELESAIKAN RESOURCE CONSTRAINED PROJECT SCHEDULING PROBLEM           "<<endl;
+    cout<<endl;
+    cout<<"                          Putri Fadhillah Prayoga - 082011233077                         "<<endl;
+    cout<<endl;
+    cout<<"========================================================================================="<<endl;
+    cout<<endl;
+    
+    nulis_txt<<endl;
+    nulis_txt<<"=========================================================================================="<<endl;
+    nulis_txt<<"  IMPLEMENTASI HYBRID ALGORITMA TEACHING LEARNING BASED OPTIMIZATION DAN HARMONY SEARCH  "<<endl;
+    nulis_txt<<"           UNTUK MENYELESAIKAN RESOURCE CONSTRAINED PROJECT SCHEDULING PROBLEM           "<<endl;
+    nulis_txt<<endl;
+    nulis_txt<<"                          Putri Fadhillah Prayoga - 082011233077                         "<<endl;
+    nulis_txt<<endl;
+    nulis_txt<<"========================================================================================="<<endl;
+    nulis_txt<<endl;
+
+    menginputkan_data();
+
+    switch (jenisdata)
+    {
+        case 1:
+            file1.open("Data_SDA_Aktivitas_10_Proyek.txt");
+            file2.open("Data_Pendahulu_Aktivitas_10_Proyek.txt");
+            file3.open("Data_Durasi_Aktivitas_10_Proyek.txt");
+            file4.open("Data_Persediaan_SDA_10_Proyek.txt");
+            tipe_kebutuhan=4;
+            jumlah_pendahulu=1;
+        break;
+
+        case 2:
+            file1.open("Data_SDA_Aktivitas_25_Proyek.txt");
+            file2.open("Data_Pendahulu_Aktivitas_25_Proyek.txt");
+            file3.open("Data_Durasi_Aktivitas_25_Proyek.txt");
+            file4.open("Data_Persediaan_SDA_25_Proyek.txt");
+            tipe_kebutuhan=3;
+            jumlah_pendahulu=4;
+        break;
+
+        case 3:
+            file1.open("Data_SDA_Aktivitas_60_Proyek.txt");
+            file2.open("Data_Pendahulu_Aktivitas_60_Proyek.txt");
+            file3.open("Data_Durasi_Aktivitas_60_Proyek.txt");
+            file4.open("Data_Persediaan_SDA_60_Proyek.txt");
+            tipe_kebutuhan=4;
+            jumlah_pendahulu=3;
+        break;
+    }
+    if(jenisdata==1||jenisdata==2||jenisdata==3)
+    { 
+        if(!file1.eof()) 
+        { 
+            int hitung_data=0;
+            int cacah;
+            do 
+            { 
+                file1>>cacah;
+                database_kebutuhan_aktivitas[hitung_data]=cacah;
+                hitung_data++;
+            }
+            while(!file1.eof());
+        } 
+            
+        if(!file2.eof()) 
+        { 
+            int hitung_data2=0;
+            int cacah2;
+            do 
+            { 
+                file2>>cacah2;
+                database_pendahulu_aktivitas[hitung_data2]=cacah2;
+                hitung_data2++;
+            } 
+            while(!file2.eof());
+        } 
+
+        if(!file3.eof()) 
+        { 
+            int hitung_data3=0;
+            int cacah3;
+            do
+            { 
+                file3>>cacah3;
+                data_durasi[hitung_data3]=cacah3;
+                hitung_data3++;
+            } 
+            while(!file3.eof());
+        } 
+        
+        if(!file4.eof()) 
+        { 
+            int hitung_data4=0;
+            int cacah4;
+            do 
+            { 
+                file4>>cacah4;
+                data_persediaan[hitung_data4]=cacah4;
+                hitung_data4++;
+            } 
+            while(!file4.eof());
+        } 
+            
+        else 
+        {
+            cout<<"File Kosong."<<endl;
+            jumlah_aktivitas = 0;
+        }
+    }
+
+    //   Transfer data pendahulu dan kebutuhan aktivitas
+    for(int l1=0;l1<jumlah_aktivitas;l1++)
+    { 
+        for(int k=0;k<jumlah_pendahulu;k++)
+        { 
+            data_pendahulu[l1][k]=database_pendahulu_aktivitas[(k+jumlah_pendahulu*l1)];
+        } 
+    } 
+    for(int l2=0;l2<jumlah_aktivitas;l2++)
+    { 
+        for(int k=0;k<tipe_kebutuhan;k++)
+        { 
+            data_kebutuhan[l2][k]=database_kebutuhan_aktivitas[(k+tipe_kebutuhan*l2)];
+        }
+    } 
+
+    inisialisasi_parameter();
+
+    cout<<endl<<endl<<"============================================================================================";
+
+    membangkitkan_populasi_awal();
+    penentuan_durasi_dan_jadwal(0,0,jumlah_pelajar);
+    hitung_nilai_fitness(0,0,jumlah_pelajar);
+    menampilkan_nilai_fitness(0,0,jumlah_pelajar, 1);
+
+    atas:
+    identifikasi_pelajar_terbaik();
+    if(iterasike == 1)
+    {
+        menampilkan_pelajar_terbaik(1);
+    }
+    menghitung_solusi_baru();
+    if(iterasike ==1)
+    {
+        menampilkan_solusi_baru(1);
+    }
+    penentuan_durasi_dan_jadwal(1,0,jumlah_pelajar);
+    hitung_nilai_fitness(1,0,jumlah_pelajar);
+    if(iterasike == 1)
+    {
+        menampilkan_nilai_fitness(1,0,jumlah_pelajar, 1);
+    }
+    update_fitness_pelajar();
+    if(iterasike == 1)
+    {
+        menampilkan_update_fitness_pelajar(1);
+    }
+
+    for(int i=0; i<jumlah_pelajar; ++i)
+    {
+        interaksi_antar_pelajar(i);
+        if(iterasike == 1)
+        {
+            menampilkan_interaksi_pelajar(i, 1);
+        }
+        penentuan_durasi_dan_jadwal(2,i,jumlah_pelajar);
+        hitung_nilai_fitness(2,i,jumlah_pelajar);
+        if(iterasike == 1)
+        {
+            menampilkan_nilai_fitness(2,i,jumlah_pelajar, 1);
+        }
+        simpan_pelajar_p_terbaik(i);
+        if(iterasike == 1)
+        {
+            menampilkan_pelajar_p_terbaik(i, 1); 
+        }
+    }
+
+    update_fitness_pelajar();
+    if(iterasike == 1)
+        {
+            menampilkan_update_fitness_pelajar(1); 
+        }
+    identifikasi_pelajar_terburuk();
+    if(iterasike == 1)
+        {
+            menampilkan_pelajar_terburuk(1); 
+        }
+    membangkitkan_vsb();
+    if(iterasike == 1)
+        {
+            menampilkan_vsb(1); 
+        }
+    penentuan_durasi_dan_jadwal(3,0,1);
+    hitung_nilai_fitness(3,0,1);
+    if(iterasike == 1)
+        {
+            menampilkan_nilai_fitness(3,0,1, 1);
+        }
+    update_hm();
+    if(iterasike == 1)
+        {
+            menampilkan_update_hm(1);
+        }
+
+    if(iterasike < max_iter)
+    {
+        identifikasi_pelajar_terbaik();
+        
+        cout<<endl<<endl;
+
+        nulis_txt<<">> Pelajar "<<terbaik+1<<" adalah PELAJAR TERBAIK iterasi ke-"<<iterasike<<endl<<endl;
+        cout<<">> Pelajar "<<terbaik+1<<" adalah PELAJAR TERBAIK iterasi ke-"<<iterasike<<endl<<endl;
+    
+        hasil_per_iterasi();
+        iterasike++;
+
+        nulis_txt<<"---------------------------------------------------------------------------------------------------------"<<endl;
+        nulis_txt<<"ITERASI KE-"<<iterasike<<endl;
+        nulis_txt<<"---------------------------------------------------------------------------------------------------------"<<endl<<endl;
+    
+        goto atas;
+    }
+
+    identifikasi_pelajar_terbaik();
+
+    cout<<endl<<"=========================================   HASIL AKHIR   ======================================="<<endl<<endl;
+    cout<<">> Pelajar "<<terbaik+1<<" adalah PELAJAR TERBAIK pada iterasi terakhir, yaitu iterasi ke-"<<iterasike<<endl<<endl<<endl;
+
+    nulis_txt<<"=========================================   HASIL AKHIR   ======================================="<<endl<<endl;
+    nulis_txt<<">> Pelajar "<<terbaik+1<<" adalah PELAJAR TERBAIK pada iterasi terakhir, yaitu iterasi ke-"<<iterasike<<endl<<endl<<endl;
+
+    menampilkan_pelajar_terbaik_final();
+
+    return 0;
+}
